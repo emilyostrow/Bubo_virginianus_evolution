@@ -1,0 +1,41 @@
+Input parameter values:
+               datapath = /panfs/pfs.local/home/e001o910/../../work/bi/e001o910/buboRADdata/eems/data
+               mcmcpath = /panfs/pfs.local/home/e001o910/../../work/bi/e001o910/buboRADdata/eems/data/sim3
+               prevpath = 
+               gridpath = 
+               distance = euclidean
+                diploid = 1
+                 nIndiv = 114
+                 nSites = 6048
+                 nDemes = 200
+                   seed = 1665631241
+            numMCMCIter = 1000000
+            numBurnIter = 100000
+            numThinIter = 999
+              negBiSize = 10
+              negBiProb = 0.670000
+             qVoronoiPr = 0.250000
+             mrateShape = 0.000500
+             qrateShape = 0.002000
+             sigmaShape = 0.001000
+             qrateScale = 0.500000
+             mrateScale = 2.000000
+             sigmaScale = 1.000000
+       mSeedsProposalS2 = 0.010000
+       qSeedsProposalS2 = 0.100000
+       mEffctProposalS2 = 0.100000
+       qEffctProposalS2 = 0.001000
+      mrateMuProposalS2 = 0.010000
+
+Acceptance proportions:
+	(35190/62879) = 56% for proposal type "qTileRate",		 with proposal variance "qEffctProposalS2"
+	(32906/62747) = 52% for proposal type "qTileMove",		 with proposal variance "qSeedsProposalS2"
+	(18886/62582) = 30% for proposal type "qBirthDeath"
+	(121030/187454) = 65% for proposal type "mTileRate",		 with proposal variance "mEffctProposalS2"
+	(24317/124886) = 19% for proposal type "mMeanRate",		 with proposal variance "mrateMuProposalS2"
+	(132907/186943) = 71% for proposal type "mTileMove",		 with proposal variance "mSeedsProposalS2"
+	(33921/187305) = 18% for proposal type "mBirthDeath"
+	(95566/125204) = 76% for proposal type "degrees of freedom"
+
+Final log prior: 83.20
+Final log llike: 27196.48
