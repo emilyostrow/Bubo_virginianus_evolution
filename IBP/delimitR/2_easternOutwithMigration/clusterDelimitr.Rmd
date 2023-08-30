@@ -1,0 +1,147 @@
+---
+title: "Untitled"
+author: "Emily Ostrow"
+date: '2022-11-01'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#devtools::install('delimitR', dependencies = TRUE)
+library(delimitR)
+
+#force R to find compatible python installation
+Sys.setenv(PATH = paste("/panfs/pfs.local/work/bi/bin/conda/bin/", Sys.getenv("PATH"), sep=":"))
+#setwd
+setwd("/panfs/pfs.local/work/bi/e001o910/delimitrBubo/eastOut")
+
+
+#location of our observed sfs (cannot be full path, must be in wd, drop .obs file extension)
+observedSFS <- 'BuboHap_MSFS'
+
+#location of our traits file (2 column file which maps alleles to species, must be in wd)
+traitsfile <- 'traitsTEST2.txt'
+
+#guide tree
+observedtree <- c('((1,2),0);')
+#migration matrix (must be symmetrical)
+migmatrix <- matrix(c(FALSE, TRUE, TRUE,
+                      TRUE, FALSE, TRUE,
+                      TRUE, TRUE, FALSE),
+                    nrow = 3, ncol = 3, byrow = TRUE)
+#test divergence with gene flow?
+divwgeneflow <- TRUE
+#test secondary contact?
+seccontact <- TRUE
+#what is the maximum number of migration events to consider on your guide tree?
+maxedges <- 2
+#how many species are in your guide tree?
+obsspecies<- 3
+#the number of "alleles" retained after downsampling SFS
+obssamplesize <- c(32,47,19)
+#The user must specify the number of linkage blocks to simulate
+#For unlinked SNPs, this is equal to the number of SNPs used to build your observed SFS
+obssnps <- 6048
+#The user must also provide a prefix
+#This will be used to name the fsc2 input files, as well as other output files
+#This should be unique for all guide tree + prior combinations in a folder, or files will be overwritten
+obsprefix <- 'hapMigBuboAll'
+#The user must specify priors on population sizes
+#The first vector is for population 0, the second for population 1, and the third for population 2
+#Note that these are in terms of the number of haploid individuals (as specified in the fsc2 documentation)
+obspopsizeprior <- list(c(100000,10000000),c(100000,10000000),c(100000,10000000))
+#priors for divergence times given in terms of the number of generations and must be supplied as a list of vectors
+#Divergence time priors should be provided in order of coalescent interval
+obsdivtimeprior <- list(c(0,15000),c(15001,100000))
+#prior on migration rates, program only allows one prior for all migration rates in the default model sets
+obsmigrateprior <- list(c(0.0005,0.1))
+```
+
+setup the fastsimcoal2 models
+```{r fsc2, include=T}
+#set up your prior models for fastsimcoal2
+#setup_fsc2(tree=observedtree,
+ #          nspec=obsspecies,
+  #         samplesizes=obssamplesize,
+   #       nsnps=obssnps,
+    #       prefix=obsprefix,
+     #      migmatrix=migmatrix,
+      #     popsizeprior=obspopsizeprior,
+       #    divtimeprior=obsdivtimeprior,
+        #   migrateprior=obsmigrateprior,
+         #  secondarycontact= seccontact,
+          # divwgeneflow= divwgeneflow,
+           #maxmigrations = maxedges)
+# fastsimcoalsims() requires the prefix used to generate the model files, the path to fastsimcoal2, and # of reps 
+#Generally, a minimum of 10,000 replicates under each model should be simulated.
+fastsimcoalsims(prefix=obsprefix,
+                pathtofsc='/panfs/pfs.local/work/bi/bin/fsc26_linux64/fsc26',
+                nreps=10000)
+
+#need to turn our mSFS into a binned (bSFS) specify bin number here
+#number should not be greater than the sample size of the population with the fewest samples, as this results in sparse sampling of the SFS
+```
+
+
+you are done fsc2
+```{r postfsc2makeprior, include=T, cache=T}
+#Large values lead to a more complete summary of the data, but also lead to a more sparsely sampled SFS and increased computation times
+nclasses <- 6
+#to make prior, provide:
+#prefix used to name the model files, the number of species, the number of classes to be included in the SFS,
+#a path to the working directory, the name of the traits file, the threshold,
+#the name of the folder to store the prior in, and the number of cores to use.
+FullPrior <- makeprior(prefix=obsprefix,
+                       nspec=obsspecies,
+                       nclasses=nclasses,
+                       getwd(),
+                       traitsfile = traitsfile,
+                       threshold=100, 
+                       thefolder = 'Prior',
+                       ncores = 12)
+```
+
+
+```{r postfsc2reducedprior, include=T}
+#remove extraneous files
+#clean_working(prefix=obsprefix)
+#remove invariant data
+ReducedPrior <- Prior_reduced(FullPrior)
+```
+starting random forest
+```{r randomForest, include=T, cache=F}
+#build random forest
+myRF <- RF_build_abcrf(ReducedPrior,FullPrior,5000)
+#view RF
+myRF
+#view misclassification rate for simulated data under our four models
+classification.error<-myRF[["model.rf"]]$confusion.matrix
+classification.error
+#write error rates to file
+write.csv(classification.error, file = "classification.error.csv")
+plot(myRF, training = ReducedPrior)
+#prep data
+myobserved <- prepobserved(
+  observedSFS,
+  FullPrior,
+  ReducedPrior,
+  nclasses,
+  obsspecies,
+  traitsfile=traitsfile,
+  threshold = 100)
+```
+using the Random forest to do predictions
+```{r doingPredictions, include=T, cache=F}
+#Now, we're ready to apply the RF classifier to the observed data.
+#we use the function RF_predict_abcrf(), which requires the RF object, the observed dataset,
+#the Reduced Prior, the Full Prior, and the number of trees, which should match that used to construct the classifier
+prediction <- RF_predict_abcrf(myRF, myobserved, ReducedPrior, FullPrior, 5000)
+#show results
+prediction
+#write results to file
+write.csv(as.matrix(prediction), file="prediction.csv")
+#write out model info to screen
+files <- list.files(pattern = "*.tpl")
+for (i in files){
+  cat(i,readLines(i),"\n","\n")
+}
+```

@@ -1,0 +1,14 @@
+// Search ranges and rules file
+// ****************************
+[PARAMETERS]
+//#isInt? #name   #dist.#min  #max
+//all Ns are in number of haploid individuals
+1   N0$   unif   1e+05   1e+07   output
+1   N1$   unif   1e+05   1e+07   output
+1   N2$   unif   1e+05   1e+07   output
+1   Tdiv1$   unif   0   15000   output
+1   Tdiv2$   unif   15001   1e+05   output
+
+[RULES]
+
+[COMPLEX PARAMETERS]
