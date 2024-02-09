@@ -115,6 +115,15 @@ pvalues = p$pvalues
 par(mfrow = c(2,1))
 hist(pvalues, col = "orange")
 plot(-log10(pvalues), pch = 19, col = "blue", cex = .5)
+L
+q = 1e-5
+w = which(sort(pvalues) < q * (1:L)/L)
+candidates = order(pvalues)[w] #list of candidates
+length(candidates)
+candidates
+plot(-log10(pvalues), main="Fst Outlier SNPs", xlab = "Locus", cex = .7, col = "grey")
+points(candidates, -log10(pvalues)[candidates], pch = 19, cex = .7, col = "red")
+write.csv(candidates, file = "outliercandidates.csv")
 
 ## -----------------------------------------------------------------------------
 # creation of a genotypic matrix  with missing genotypes
